@@ -69,3 +69,14 @@ if __name__ == "__main__":
         port=settings.port,
         reload=True
     )
+
+
+def main():
+    """Entry point for uv script."""
+    import uvicorn
+    uvicorn.run(
+        "app.main:app",
+        host=settings.host,
+        port=settings.port,
+        reload=True
+    )

@@ -30,43 +30,68 @@ A desktop language learning app that lets you speak naturally with an AI tutor. 
 
 ## Getting Started
 
+### Quick Setup (Recommended)
+
+Use the automated setup script with uv package manager:
+
+```bash
+# Run the setup script (installs uv if needed)
+./setup.sh
+```
+
+This will:
+- Install uv (fast Python package manager) if not present
+- Set up backend with uv virtual environment
+- Install all dependencies
+- Set up frontend
+
+See [UV_SETUP.md](UV_SETUP.md) for detailed uv usage and troubleshooting.
+
 ### Prerequisites
 
 - **Python 3.12+** (3.13 not required, but 3.12 recommended for latest features)
 - **Node.js 22+ LTS** (or Node.js 24+ for latest performance and security)
+- **uv** (automatically installed by setup.sh, or install manually: `curl -LsSf https://astral.sh/uv/install.sh | sh`)
 - **Anthropic API Key** (free tier available at https://console.anthropic.com/)
 
-### Backend Setup
+### Manual Backend Setup
 
-1. Navigate to the backend directory:
+1. Install uv (if not already installed):
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+2. Navigate to the backend directory:
 ```bash
 cd backend
 ```
 
-2. Install Python dependencies (using uv recommended):
+3. Create virtual environment and install dependencies with uv:
 ```bash
-# Using uv (recommended)
-pip install uv
-uv pip install -e .
-
-# Or using pip
-pip install -r requirements.txt
+# Create venv and install all dependencies
+uv venv
+uv pip install -e ".[dev]"
 ```
 
-3. Create a `.env` file from the example:
+4. Create a `.env` file from the example:
 ```bash
 cp .env.example .env
 ```
 
-4. Add your Anthropic API key to `.env`:
+5. Add your Anthropic API key to `.env`:
 ```
 ANTHROPIC_API_KEY=your_api_key_here
 ```
 
-5. Run the backend:
+6. Run the backend:
 ```bash
-cd app
-python main.py
+# Using uv (recommended)
+source .venv/bin/activate
+babblr-backend
+
+# Or using the run script
+cd ..
+./run-backend.sh
 ```
 
 The API will be available at http://localhost:8000

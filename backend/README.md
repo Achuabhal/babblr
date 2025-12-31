@@ -12,19 +12,39 @@ FastAPI backend for the Babblr language learning application.
 
 ## Setup
 
-1. Install dependencies using uv (recommended):
-```bash
-# Install uv if you haven't already
-pip install uv
+### Using uv (Recommended)
 
-# Install project dependencies
+[uv](https://github.com/astral-sh/uv) is a fast Python package installer and resolver.
+
+1. Install uv if not already installed:
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+2. Create virtual environment and install dependencies:
+```bash
+# Create venv
+uv venv
+
+# Install all dependencies from pyproject.toml
 uv pip install -e .
+
+# Or install with dev dependencies (includes pytest, ruff, etc.)
+uv pip install -e ".[dev]"
 ```
 
-Or using pip:
+### Using pip (Alternative)
+
 ```bash
-pip install -r requirements.txt
+# Create venv
+python -m venv .venv
+source .venv/bin/activate
+
+# Install from pyproject.toml
+pip install -e ".[dev]"
 ```
+
+**Note**: `requirements.txt` is kept for backward compatibility but `pyproject.toml` is the primary source.
 
 2. Create `.env` file from `.env.example`:
 ```bash
@@ -44,7 +64,22 @@ cd /path/to/babblr
 ./run-backend.sh
 ```
 
-**Option 2: Manual run**
+This script automatically uses uv if available, falling back to standard Python if not.
+
+**Option 2: Using uv directly**
+```bash
+cd backend
+source .venv/bin/activate  # Activate venv
+babblr-backend            # Run the installed script
+```
+
+**Option 3: Using uv run**
+```bash
+cd backend
+uv run babblr-backend
+```
+
+**Option 4: Manual run with Python**
 ```bash
 cd backend
 export PYTHONPATH=$(pwd)
