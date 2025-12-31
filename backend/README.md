@@ -29,13 +29,24 @@ ANTHROPIC_API_KEY=your_api_key_here
 
 ## Running
 
+**Option 1: Using the convenience script (recommended)**
 ```bash
+cd /path/to/babblr
+./run-backend.sh
+```
+
+**Option 2: Manual run**
+```bash
+cd backend
+export PYTHONPATH=$(pwd)
 cd app
 python main.py
 ```
 
 Or with uvicorn:
 ```bash
+cd backend
+export PYTHONPATH=$(pwd)
 uvicorn app.main:app --reload
 ```
 

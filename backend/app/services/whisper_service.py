@@ -1,4 +1,10 @@
-import whisper
+try:
+    import whisper
+    WHISPER_AVAILABLE = True
+except ImportError:
+    WHISPER_AVAILABLE = False
+    whisper = None
+
 import tempfile
 import os
 from typing import Tuple
@@ -10,7 +16,11 @@ class WhisperService:
     def __init__(self):
         # Load the base model (good balance between speed and accuracy)
         # For production, you might want to make this configurable
-        self.model = whisper.load_model("base")
+        if WHISPER_AVAILABLE and whisper is not None:
+            self.model = whisper.load_model("base")
+        else:
+            self.model = None
+            print("⚠️  Whisper not available. Speech-to-text will not work. Install with: pip install openai-whisper")
     
     async def transcribe_audio(self, audio_file_path: str, language: str = None) -> Tuple[str, dict]:
         """
@@ -23,6 +33,9 @@ class WhisperService:
         Returns:
             Tuple of (transcribed_text, result_dict)
         """
+        if not WHISPER_AVAILABLE or self.model is None:
+            raise Exception("Whisper is not installed. Install with: pip install openai-whisper")
+        
         try:
             # Whisper transcribe is CPU-bound, but for simplicity we'll run it directly
             # In production, consider using a task queue
