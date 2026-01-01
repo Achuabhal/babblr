@@ -85,6 +85,7 @@ export const chatService = {
     language: string,
     difficulty_level: string
   ): Promise<ChatResponse> {
+    console.log('📤 Sending chat message:', { conversation_id, user_message, language, difficulty_level });
     try {
       const response = await api.post('/chat', {
         conversation_id,
@@ -92,8 +93,10 @@ export const chatService = {
         language,
         difficulty_level,
       });
+      console.log('✅ Chat response received:', response.data);
       return response.data;
     } catch (error) {
+      console.error('❌ Chat request failed');
       handleError(error);
       throw error;
     }
