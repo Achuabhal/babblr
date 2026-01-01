@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { handleError } from '../utils/errorHandler';
 import type { 
   Conversation, 
   Message, 
@@ -18,32 +19,62 @@ const api = axios.create({
 
 export const conversationService = {
   async create(language: string, difficulty_level: string): Promise<Conversation> {
-    const response = await api.post('/conversations', { language, difficulty_level });
-    return response.data;
+    try {
+      const response = await api.post('/conversations', { language, difficulty_level });
+      return response.data;
+    } catch (error) {
+      handleError(error);
+      throw error;
+    }
   },
 
   async list(): Promise<Conversation[]> {
-    const response = await api.get('/conversations');
-    return response.data;
+    try {
+      const response = await api.get('/conversations');
+      return response.data;
+    } catch (error) {
+      handleError(error);
+      throw error;
+    }
   },
 
   async get(id: number): Promise<Conversation> {
-    const response = await api.get(`/conversations/${id}`);
-    return response.data;
+    try {
+      const response = await api.get(`/conversations/${id}`);
+      return response.data;
+    } catch (error) {
+      handleError(error);
+      throw error;
+    }
   },
 
   async getMessages(id: number): Promise<Message[]> {
-    const response = await api.get(`/conversations/${id}/messages`);
-    return response.data;
+    try {
+      const response = await api.get(`/conversations/${id}/messages`);
+      return response.data;
+    } catch (error) {
+      handleError(error);
+      throw error;
+    }
   },
 
   async getVocabulary(id: number): Promise<VocabularyItem[]> {
-    const response = await api.get(`/conversations/${id}/vocabulary`);
-    return response.data;
+    try {
+      const response = await api.get(`/conversations/${id}/vocabulary`);
+      return response.data;
+    } catch (error) {
+      handleError(error);
+      throw error;
+    }
   },
 
   async delete(id: number): Promise<void> {
-    await api.delete(`/conversations/${id}`);
+    try {
+      await api.delete(`/conversations/${id}`);
+    } catch (error) {
+      handleError(error);
+      throw error;
+    }
   },
 };
 
@@ -54,13 +85,18 @@ export const chatService = {
     language: string,
     difficulty_level: string
   ): Promise<ChatResponse> {
-    const response = await api.post('/chat', {
-      conversation_id,
-      user_message,
-      language,
-      difficulty_level,
-    });
-    return response.data;
+    try {
+      const response = await api.post('/chat', {
+        conversation_id,
+        user_message,
+        language,
+        difficulty_level,
+      });
+      return response.data;
+    } catch (error) {
+      handleError(error);
+      throw error;
+    }
   },
 };
 
@@ -70,29 +106,39 @@ export const speechService = {
     conversation_id: number,
     language: string
   ): Promise<TranscriptionResponse> {
-    const formData = new FormData();
-    formData.append('audio', audioBlob, 'recording.webm');
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
 
-    const response = await api.post(
-      `/speech/transcribe?conversation_id=${conversation_id}&language=${language}`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
-    );
-    return response.data;
+      const response = await api.post(
+        `/speech/transcribe?conversation_id=${conversation_id}&language=${language}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      handleError(error);
+      throw error;
+    }
   },
 };
 
 export const ttsService = {
   async synthesize(text: string, language: string): Promise<Blob> {
-    const response = await api.post(
-      '/tts/synthesize',
-      { text, language },
-      { responseType: 'blob' }
-    );
-    return response.data;
+    try {
+      const response = await api.post(
+        '/tts/synthesize',
+        { text, language },
+        { responseType: 'blob' }
+      );
+      return response.data;
+    } catch (error) {
+      handleError(error);
+      throw error;
+    }
   },
 };
