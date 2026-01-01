@@ -77,8 +77,8 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
 
       setInputText('');
     } catch (error) {
+      // Error is already handled by errorHandler in api.ts
       console.error('Failed to send message:', error);
-      alert('Failed to send message. Please check your API configuration.');
     } finally {
       setIsLoading(false);
     }
@@ -96,8 +96,8 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
       // Use the transcribed text
       await handleSendMessage(transcription.text);
     } catch (error) {
+      // Error is already handled by errorHandler in api.ts
       console.error('Failed to process voice recording:', error);
-      alert('Failed to process voice recording.');
     } finally {
       setIsLoading(false);
     }

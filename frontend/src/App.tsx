@@ -31,8 +31,8 @@ function App() {
       setShowLanguageSelector(false);
       await loadConversations();
     } catch (error) {
+      // Error is already handled by errorHandler in api.ts
       console.error('Failed to create conversation:', error);
-      alert('Failed to create conversation. Make sure the backend is running.');
     }
   };
 

@@ -1,3 +1,6 @@
+# Ignore tmp directories
+tmp/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -227,3 +230,4 @@ backend/audio_output/
 # IDE
 .vscode/
 .idea/
+.claude/
