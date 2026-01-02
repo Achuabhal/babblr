@@ -7,8 +7,6 @@ interface MessageBubbleProps {
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
-  const isUser = message.role === 'user';
-  
   return (
     <div className={`message ${message.role}`}>
       <div className="message-content">
