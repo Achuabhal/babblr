@@ -56,7 +56,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
-  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const audioEndedHandlerRef = useRef<(() => void) | null>(null);
 
   /**
    * Draw waveform visualization on canvas
@@ -69,7 +69,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
       return;
     }
 
-    // Initialize canvas context and data array once
+    // Initialize canvas context once
     if (!canvasCtxRef.current) {
       canvasCtxRef.current = canvas.getContext('2d');
     }
@@ -77,12 +77,8 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
     const ctx = canvasCtxRef.current;
     if (!ctx) return;
 
-    if (!dataArrayRef.current || dataArrayRef.current.length !== analyser.frequencyBinCount) {
-      dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount) as Uint8Array;
-    }
-
     const bufferLength = analyser.frequencyBinCount;
-    const dataArray = dataArrayRef.current as Uint8Array;
+    const dataArray = new Uint8Array(bufferLength);
 
     const draw = () => {
       if (state.status !== 'recording') {
@@ -91,7 +87,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
 
       animationRef.current = requestAnimationFrame(draw);
 
-      analyser.getByteTimeDomainData(dataArray as Uint8Array<ArrayBuffer>);
+      analyser.getByteTimeDomainData(dataArray);
 
       // Clear canvas
       ctx.fillStyle = 'rgb(243, 244, 246)'; // bg-gray-100
@@ -163,15 +159,13 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
     if (!audioRef.current) {
       audioRef.current = new Audio(state.audioUrl);
       
-      // Store reference to the handler for cleanup
+      // Create and store event handler
       const endedHandler = () => {
         setIsPlaying(false);
       };
       
+      audioEndedHandlerRef.current = endedHandler;
       audioRef.current.addEventListener('ended', endedHandler);
-      
-      // Store handler reference for cleanup
-      (audioRef.current as any)._endedHandler = endedHandler;
     }
 
     if (isPlaying) {
@@ -189,9 +183,9 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
   const handleReRecord = () => {
     if (audioRef.current) {
       // Clean up event listener
-      const handler = (audioRef.current as any)._endedHandler;
-      if (handler) {
-        audioRef.current.removeEventListener('ended', handler);
+      if (audioEndedHandlerRef.current) {
+        audioRef.current.removeEventListener('ended', audioEndedHandlerRef.current);
+        audioEndedHandlerRef.current = null;
       }
       audioRef.current.pause();
       audioRef.current = null;
@@ -209,9 +203,9 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
     if (state.audioBlob) {
       if (audioRef.current) {
         // Clean up event listener
-        const handler = (audioRef.current as any)._endedHandler;
-        if (handler) {
-          audioRef.current.removeEventListener('ended', handler);
+        if (audioEndedHandlerRef.current) {
+          audioRef.current.removeEventListener('ended', audioEndedHandlerRef.current);
+          audioEndedHandlerRef.current = null;
         }
         audioRef.current.pause();
         audioRef.current = null;
@@ -229,9 +223,9 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
     return () => {
       if (audioRef.current) {
         // Clean up event listener
-        const handler = (audioRef.current as any)._endedHandler;
-        if (handler) {
-          audioRef.current.removeEventListener('ended', handler);
+        if (audioEndedHandlerRef.current) {
+          audioRef.current.removeEventListener('ended', audioEndedHandlerRef.current);
+          audioEndedHandlerRef.current = null;
         }
         audioRef.current.pause();
         audioRef.current = null;

@@ -180,7 +180,7 @@ export function useAudioRecorder(): UseAudioRecorder {
       startTimeRef.current = Date.now();
 
       // Start duration timer
-      timerRef.current = setInterval(() => {
+      timerRef.current = window.setInterval(() => {
         const elapsed = (Date.now() - startTimeRef.current) / 1000;
         
         setState((prev) => ({
@@ -193,7 +193,7 @@ export function useAudioRecorder(): UseAudioRecorder {
           console.log('⏰ Max duration reached, auto-stopping recording');
           mediaRecorder.stop();
         }
-      }, 100) as unknown as number;
+      }, 100);
 
       console.log('✅ Recording started successfully');
     } catch (error) {
