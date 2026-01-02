@@ -6,7 +6,7 @@ export interface BabblrErrorResponse {
   error?: {
     code: string;
     message: string;
-    details?: any;
+    details?: string;
     retry?: boolean;
     action?: string;
   };
@@ -53,18 +53,21 @@ export const handleError = (error: unknown): ErrorDetails => {
     // New backend error format (structured)
     if (data && typeof data === 'object') {
       if ('message' in data && typeof data.message === 'string') {
-        // New format: { message: "...", technical_details: "..." }
-        message = data.message || message;
-        technical_details = (data as any).technical_details;
-        action = (data as any).fix;
+        // New format: { message: "...", technical_details: "...", fix: "..." }
+        const typedData = data as BabblrErrorResponse;
+        message = typedData.message || message;
+        technical_details = typedData.technical_details;
+        action = typedData.fix;
       } else if ('error' in data && typeof data.error === 'object' && data.error !== null && 'message' in data.error) {
         // Old format: { error: { code: "...", message: "..." } }
-        const errorObj = data.error as any;
-        message = errorObj.message;
-        code = errorObj.code;
-        retry = errorObj.retry || false;
-        action = errorObj.action;
-        technical_details = errorObj.details;
+        const typedData = data as BabblrErrorResponse;
+        if (typedData.error) {
+          message = typedData.error.message;
+          code = typedData.error.code;
+          retry = typedData.error.retry || false;
+          action = typedData.error.action;
+          technical_details = typedData.error.details;
+        }
       }
     }
 
