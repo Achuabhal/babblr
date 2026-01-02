@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import LanguageSelector from './components/LanguageSelector';
 import ConversationInterface from './components/ConversationInterface';
 import ConversationList from './components/ConversationList';
@@ -11,10 +11,6 @@ function App() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [showLanguageSelector, setShowLanguageSelector] = useState(true);
 
-  useEffect(() => {
-    loadConversations();
-  }, []);
-
   const loadConversations = async () => {
     try {
       const convs = await conversationService.list();
@@ -23,6 +19,10 @@ function App() {
       console.error('Failed to load conversations:', error);
     }
   };
+
+  useEffect(() => {
+    loadConversations();
+  }, []);
 
   const handleStartNewConversation = async (language: Language, difficulty: DifficultyLevel) => {
     try {

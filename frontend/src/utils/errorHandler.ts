@@ -2,15 +2,15 @@ import toast from "react-hot-toast";
 import { AxiosError } from "axios";
 
 export interface BabblrErrorResponse {
+  // Old backend error format (structured object)
   error?: {
     code: string;
     message: string;
-    details?: any;
+    details?: string;
     retry?: boolean;
     action?: string;
   };
-  // New backend error format
-  error?: string;
+  // New backend error format (simple fields)
   message?: string;
   technical_details?: string;
   fix?: string;
@@ -52,19 +52,22 @@ export const handleError = (error: unknown): ErrorDetails => {
 
     // New backend error format (structured)
     if (data && typeof data === 'object') {
-      if ('error' in data && typeof data.error === 'string') {
-        // New format: { error: "auth_error", message: "...", technical_details: "..." }
-        code = data.error || code;
-        message = data.message || message;
-        technical_details = data.technical_details;
-        action = data.fix;
-      } else if ('error' in data && data.error?.message) {
+      if ('message' in data && typeof data.message === 'string') {
+        // New format: { message: "...", technical_details: "...", fix: "..." }
+        const typedData = data as BabblrErrorResponse;
+        message = typedData.message || message;
+        technical_details = typedData.technical_details;
+        action = typedData.fix;
+      } else if ('error' in data && typeof data.error === 'object' && data.error !== null && 'message' in data.error) {
         // Old format: { error: { code: "...", message: "..." } }
-        message = data.error.message;
-        code = data.error.code;
-        retry = data.error.retry || false;
-        action = data.error.action;
-        technical_details = data.error.details;
+        const typedData = data as BabblrErrorResponse;
+        if (typedData.error) {
+          message = typedData.error.message;
+          code = typedData.error.code;
+          retry = typedData.error.retry || false;
+          action = typedData.error.action;
+          technical_details = typedData.error.details;
+        }
       }
     }
 
