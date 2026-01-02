@@ -74,7 +74,7 @@ export function useAudioRecorder(): UseAudioRecorder {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -193,7 +193,7 @@ export function useAudioRecorder(): UseAudioRecorder {
           console.log('⏰ Max duration reached, auto-stopping recording');
           mediaRecorder.stop();
         }
-      }, 100);
+      }, 100) as unknown as number;
 
       console.log('✅ Recording started successfully');
     } catch (error) {

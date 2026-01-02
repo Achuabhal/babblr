@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Mic, Square, Play, Pause, RotateCcw, Send } from 'lucide-react';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
 
@@ -55,11 +55,13 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
   const animationRef = useRef<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const dataArrayRef = useRef<Uint8Array | null>(null);
 
   /**
    * Draw waveform visualization on canvas
    */
-  const drawWaveform = () => {
+  const drawWaveform = useCallback(() => {
     const canvas = canvasRef.current;
     const analyser = getAnalyser();
     
@@ -67,11 +69,20 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
       return;
     }
 
-    const ctx = canvas.getContext('2d');
+    // Initialize canvas context and data array once
+    if (!canvasCtxRef.current) {
+      canvasCtxRef.current = canvas.getContext('2d');
+    }
+    
+    const ctx = canvasCtxRef.current;
     if (!ctx) return;
 
+    if (!dataArrayRef.current || dataArrayRef.current.length !== analyser.frequencyBinCount) {
+      dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount) as Uint8Array;
+    }
+
     const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
+    const dataArray = dataArrayRef.current as Uint8Array;
 
     const draw = () => {
       if (state.status !== 'recording') {
@@ -80,7 +91,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
 
       animationRef.current = requestAnimationFrame(draw);
 
-      analyser.getByteTimeDomainData(dataArray);
+      analyser.getByteTimeDomainData(dataArray as Uint8Array<ArrayBuffer>);
 
       // Clear canvas
       ctx.fillStyle = 'rgb(243, 244, 246)'; // bg-gray-100
@@ -112,7 +123,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
     };
 
     draw();
-  };
+  }, [state.status, getAnalyser]);
 
   /**
    * Start waveform visualization when recording starts
@@ -130,7 +141,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [state.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [state.status, drawWaveform]);
 
   /**
    * Handle main record/stop button click
@@ -151,9 +162,16 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
 
     if (!audioRef.current) {
       audioRef.current = new Audio(state.audioUrl);
-      audioRef.current.addEventListener('ended', () => {
+      
+      // Store reference to the handler for cleanup
+      const endedHandler = () => {
         setIsPlaying(false);
-      });
+      };
+      
+      audioRef.current.addEventListener('ended', endedHandler);
+      
+      // Store handler reference for cleanup
+      (audioRef.current as any)._endedHandler = endedHandler;
     }
 
     if (isPlaying) {
@@ -170,6 +188,11 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
    */
   const handleReRecord = () => {
     if (audioRef.current) {
+      // Clean up event listener
+      const handler = (audioRef.current as any)._endedHandler;
+      if (handler) {
+        audioRef.current.removeEventListener('ended', handler);
+      }
       audioRef.current.pause();
       audioRef.current = null;
     }
@@ -185,6 +208,11 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
     
     if (state.audioBlob) {
       if (audioRef.current) {
+        // Clean up event listener
+        const handler = (audioRef.current as any)._endedHandler;
+        if (handler) {
+          audioRef.current.removeEventListener('ended', handler);
+        }
         audioRef.current.pause();
         audioRef.current = null;
       }
@@ -200,6 +228,11 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
   useEffect(() => {
     return () => {
       if (audioRef.current) {
+        // Clean up event listener
+        const handler = (audioRef.current as any)._endedHandler;
+        if (handler) {
+          audioRef.current.removeEventListener('ended', handler);
+        }
         audioRef.current.pause();
         audioRef.current = null;
       }
