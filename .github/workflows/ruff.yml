@@ -1,0 +1,25 @@
+name: Ruff
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ruff format (check)
+        uses: astral-sh/ruff-action@v1
+        with:
+          version: "0.14.10"
+          args: "format --check --config backend/pyproject.toml backend"
+
+      - name: Ruff lint (check)
+        uses: astral-sh/ruff-action@v1
+        with:
+          version: "0.14.10"
+          args: "check --fix --exit-non-zero-on-fix --config backend/pyproject.toml backend"
+
