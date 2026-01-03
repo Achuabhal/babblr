@@ -11,7 +11,7 @@ import logging
 import os
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -74,12 +74,12 @@ class STTService(ABC):
         pass
 
     @abstractmethod
-    def get_supported_languages(self) -> list[str]:
+    def get_supported_languages(self) -> List[str]:
         """Return list of supported language codes."""
         pass
 
     @abstractmethod
-    def get_available_models(self) -> list[str]:
+    def get_available_models(self) -> List[str]:
         """Return list of available models."""
         pass
 
@@ -311,12 +311,11 @@ class WhisperService(STTService):
         try:
             logger.info("Converting audio format from %s to wav", ext)
 
-            # Load audio
-            audio = AudioSegment.from_file(audio_path)
-
-            # Export as WAV
-            output_path = audio_path + ".converted.wav"
-            audio.export(output_path, format="wav")
+            # Run conversion in thread pool to avoid blocking
+            loop = asyncio.get_event_loop()
+            output_path = await loop.run_in_executor(
+                None, self._do_audio_conversion, audio_path
+            )
 
             logger.info("Audio converted successfully to %s", output_path)
             return output_path
@@ -325,7 +324,26 @@ class WhisperService(STTService):
             logger.warning("Failed to convert audio format: %s. Using original file.", str(e))
             return audio_path
 
-    def _map_language_code(self, language: str) -> str:
+    def _do_audio_conversion(self, audio_path: str) -> str:
+        """
+        Perform audio conversion (runs in thread pool).
+
+        Args:
+            audio_path: Path to the audio file
+
+        Returns:
+            Path to converted file
+        """
+        # Load audio
+        audio = AudioSegment.from_file(audio_path)
+
+        # Export as WAV
+        output_path = audio_path + ".converted.wav"
+        audio.export(output_path, format="wav")
+
+        return output_path
+
+    def _map_language_code(self, language: Optional[str]) -> Optional[str]:
         """
         Map full language names to Whisper language codes.
 
@@ -347,11 +365,11 @@ class WhisperService(STTService):
         # Map from name to code
         return self.SUPPORTED_LANGUAGES.get(language_lower, language_lower)
 
-    def get_supported_languages(self) -> list[str]:
+    def get_supported_languages(self) -> List[str]:
         """Return list of supported language codes."""
         return list(self.SUPPORTED_LANGUAGES.values())
 
-    def get_available_models(self) -> list[str]:
+    def get_available_models(self) -> List[str]:
         """Return list of available Whisper models."""
         return self.AVAILABLE_MODELS
 

@@ -11,6 +11,7 @@ import shutil
 import tempfile
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
@@ -25,7 +26,7 @@ router = APIRouter(prefix="/api/stt", tags=["stt"])
 
 
 @router.post("/transcribe", response_model=TranscriptionResponse)
-async def transcribe_audio(audio_file: UploadFile = File(...), language: str = None):
+async def transcribe_audio(audio_file: UploadFile = File(...), language: Optional[str] = None):
     """
     Transcribe audio file to text using OpenAI Whisper.
 
