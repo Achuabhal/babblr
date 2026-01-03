@@ -84,7 +84,7 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
   };
 
   const handleVoiceRecording = async (audioBlob: Blob) => {
-    console.log('🎤 Processing voice recording from AudioRecorder component');
+    console.log('[Conversation] Processing voice recording from AudioRecorder component');
     setIsLoading(true);
     try {
       const transcription = await speechService.transcribe(

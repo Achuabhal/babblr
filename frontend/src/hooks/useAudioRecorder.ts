@@ -108,7 +108,7 @@ export function useAudioRecorder(): UseAudioRecorder {
    * Start recording audio from the user's microphone
    */
   const startRecording = useCallback(async () => {
-    console.log('🎤 Starting audio recording...');
+    console.log('[AudioRecorder] Starting audio recording');
     
     try {
       // Reset state
@@ -163,7 +163,7 @@ export function useAudioRecorder(): UseAudioRecorder {
         const audioBlob = new Blob(chunksRef.current, { type: mimeType });
         const audioUrl = URL.createObjectURL(audioBlob);
         
-        console.log('✅ Recording stopped, blob size:', audioBlob.size, 'bytes');
+        console.log('[AudioRecorder] Recording stopped, blob size:', audioBlob.size, 'bytes');
         
         setState((prev) => ({
           ...prev,
@@ -190,14 +190,14 @@ export function useAudioRecorder(): UseAudioRecorder {
 
         // Auto-stop at max duration
         if (elapsed >= MAX_DURATION) {
-          console.log('⏰ Max duration reached, auto-stopping recording');
+          console.log('[AudioRecorder] Max duration reached, auto-stopping recording');
           mediaRecorder.stop();
         }
       }, 100);
 
-      console.log('✅ Recording started successfully');
+      console.log('[AudioRecorder] Recording started successfully');
     } catch (error) {
-      console.error('❌ Failed to start recording:', error);
+      console.error('[AudioRecorder] Failed to start recording:', error);
       
       let errorMessage = 'Failed to access microphone';
       
@@ -227,7 +227,7 @@ export function useAudioRecorder(): UseAudioRecorder {
    * Stop recording audio
    */
   const stopRecording = useCallback(() => {
-    console.log('⏹️ Stopping audio recording...');
+    console.log('[AudioRecorder] Stopping audio recording');
     
     if (mediaRecorderRef.current && state.status === 'recording') {
       mediaRecorderRef.current.stop();
@@ -238,7 +238,7 @@ export function useAudioRecorder(): UseAudioRecorder {
    * Clear the current recording and reset to idle state
    */
   const clearRecording = useCallback(() => {
-    console.log('🗑️ Clearing recording...');
+    console.log('[AudioRecorder] Clearing recording');
     
     // Revoke the object URL to free memory
     if (state.audioUrl) {

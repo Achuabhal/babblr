@@ -13,12 +13,11 @@ export interface AudioRecorderProps {
 }
 
 /**
- * Format seconds to MM:SS
+ * Format seconds to display with 1 decimal place (e.g., "45.3s")
+ * Since max recording is 60 seconds, minute display is not needed.
  */
 function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  return `${seconds.toFixed(1)}s`;
 }
 
 /**
@@ -198,7 +197,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onSubmit, disabled = fals
    * Handle submit button click
    */
   const handleSubmit = () => {
-    console.log('🎙️ Submitting audio recording, blob size:', state.audioBlob?.size, 'bytes');
+    console.log('[AudioRecorder] Submitting audio recording, blob size:', state.audioBlob?.size, 'bytes');
     
     if (state.audioBlob) {
       if (audioRef.current) {
