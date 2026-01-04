@@ -7,11 +7,11 @@ Run after starting the backend with: ./run-backend.sh
 Usage: python examples/test_api.py
 """
 
-import requests
 import json
 import sys
 import time
 
+import requests
 
 BASE_URL = "http://localhost:8000"
 
@@ -150,9 +150,7 @@ def main():
 
     # Test 3: Chat
     if not test_chat(conversation_id):
-        print(
-            "\n⚠️  Chat test failed. Check if ANTHROPIC_API_KEY is set in backend/.env"
-        )
+        print("\n⚠️  Chat test failed. Check if ANTHROPIC_API_KEY is set in backend/.env")
 
     # Test 4: Get messages
     test_get_messages(conversation_id)
