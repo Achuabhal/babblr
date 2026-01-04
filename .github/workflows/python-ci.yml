@@ -54,6 +54,11 @@ jobs:
         run: |
           uv run ruff check . ../examples
 
+      - name: Pyright type check
+        working-directory: backend
+        run: |
+          uv run pyright
+
   # Unit tests - run without external services
   test-unit:
     runs-on: ubuntu-latest

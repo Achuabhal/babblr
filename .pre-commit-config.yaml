@@ -9,3 +9,13 @@ repos:
         args: ["--config", "backend/pyproject.toml"]
         files: ^backend/
 
+  - repo: local
+    hooks:
+      - id: pyright
+        name: pyright
+        entry: uv run --directory backend pyright
+        language: system
+        types: [python]
+        files: ^backend/app/
+        pass_filenames: false
+
