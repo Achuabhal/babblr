@@ -111,9 +111,10 @@ Response format:
 
             return assistant_message, vocabulary_items
         except AuthenticationError as e:
-            logger.error(
-                f"Authentication error: Invalid Anthropic API key. "
-                f"Please check your ANTHROPIC_API_KEY in .env file. Original error: {e}"
+            logger.error(f"Authentication error in generate_response: {e}")
+            raise AuthenticationError(
+                message="Invalid Anthropic API key. Please check your ANTHROPIC_API_KEY in .env file",
+                response=e.response if hasattr(e, "response") else None,
             )
             raise
         except APIError as e:

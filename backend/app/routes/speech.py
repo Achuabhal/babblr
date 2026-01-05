@@ -81,16 +81,22 @@ async def transcribe_audio(
 
         logger.info("Starting transcription for conversation_id=%s", conversation_id)
         # Transcribe
-        transcribed_text, result = await whisper_service.transcribe_audio(temp_file.name, language)
+        result = await whisper_service.transcribe(temp_file.name, language=language, timeout=30)
 
         logger.info(
-            "Transcription complete: conversation_id=%s, text_length=%s",
+            "Transcription complete: conversation_id=%s, text_length=%s, "
+            "language=%s, confidence=%.2f",
             conversation_id,
-            len(transcribed_text),
+            len(result.text),
+            result.language,
+            result.confidence,
         )
 
         return TranscriptionResponse(
-            text=transcribed_text,
+            text=result.text,
+            language=result.language,
+            confidence=result.confidence,
+            duration=result.duration,
             corrections=None,  # Corrections will be done in chat endpoint
         )
 

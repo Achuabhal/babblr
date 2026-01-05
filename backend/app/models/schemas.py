@@ -62,6 +62,9 @@ class TranscriptionResponse(BaseModel):
     """Schema for transcription response."""
 
     text: str
+    language: str
+    confidence: float
+    duration: float
     corrections: Optional[List[dict]] = None
 
 

@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database.db import init_db
-from app.routes import chat, conversations, speech, tts
+from app.routes import chat, conversations, speech, stt, tts
 
 
 @asynccontextmanager
@@ -37,6 +37,7 @@ app.include_router(conversations.router)
 app.include_router(chat.router)
 app.include_router(speech.router)
 app.include_router(tts.router)
+app.include_router(stt.router)
 
 
 @app.get("/")
