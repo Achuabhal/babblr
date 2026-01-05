@@ -550,6 +550,7 @@ The following features are tracked in GitHub issues and are not yet implemented.
 - [ ] Ollama is running with a model
 - [ ] Frontend opens without errors
 - [ ] Basic conversation flow works
+- [ ] TTS (Web Speech API): click **Play** on a user message and on an assistant message; both must speak (ANY text is allowed, including user input)
 
 ### Full Validation (All Features)
 

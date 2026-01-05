@@ -14,7 +14,21 @@
   padding: 1rem 1.5rem;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
+}
+
+.conversation-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.conversation-header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .back-button {
