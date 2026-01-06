@@ -1,11 +1,15 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, RedirectResponse
 
 from app.config import settings
 from app.database.db import init_db
 from app.routes import chat, conversations, speech, stt, tts
+
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
 @asynccontextmanager
@@ -38,6 +42,23 @@ app.include_router(chat.router)
 app.include_router(speech.router)
 app.include_router(tts.router)
 app.include_router(stt.router)
+
+
+@app.get("/favicon.svg", include_in_schema=False)
+async def favicon_svg():
+    """Serve the Babblr favicon as an SVG.
+
+    The SVG is stored under app/static to keep backend assets co-located
+    with the FastAPI app, and to avoid relying on the current working
+    directory when the server is started.
+    """
+    return FileResponse(_STATIC_DIR / "favicon.svg", media_type="image/svg+xml")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon_ico():
+    """Redirect /favicon.ico to the SVG favicon to avoid 404s in browsers."""
+    return RedirectResponse(url="/favicon.svg", status_code=307)
 
 
 @app.get("/")
