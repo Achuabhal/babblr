@@ -105,10 +105,7 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        "app.main:app",
-        host=settings.babblr_api_host,
-        port=settings.babblr_api_port,
-        reload=settings.babblr_dev_mode,
+        "main:app", host=settings.babblr_api_host, port=settings.babblr_api_port, reload=True
     )
 
 
@@ -117,8 +114,5 @@ def main():
     import uvicorn
 
     uvicorn.run(
-        "app.main:app",
-        host=settings.babblr_api_host,
-        port=settings.babblr_api_port,
-        reload=settings.babblr_dev_mode,
+        "app.main:app", host=settings.babblr_api_host, port=settings.babblr_api_port, reload=True
     )

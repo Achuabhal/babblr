@@ -62,8 +62,7 @@ This will:
 #### Backend Changes
 
 1. Make your changes in `backend/app/`
-2. Use `run-backend.(sh|bat)` in dev mode to auto-reload on file changes.
-   - Reload is controlled by `BABBLR_DEV_MODE` (default: enabled in the convenience scripts).
+2. The server will auto-reload if using `uvicorn --reload`
 3. Test your changes:
    ```bash
    cd backend
