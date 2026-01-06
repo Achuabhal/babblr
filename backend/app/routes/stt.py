@@ -75,7 +75,7 @@ async def transcribe_audio(audio_file: UploadFile = File(...), language: Optiona
         temp_file.close()
 
         # Save file in development mode (for debugging/testing)
-        if settings.development_mode:
+        if settings.babblr_dev_mode:
             await _save_audio_file(temp_file.name, audio_file.filename)
 
         logger.info("Starting transcription...")
@@ -232,7 +232,7 @@ async def _save_audio_file(temp_path: str, original_filename: str) -> str | None
     """
     try:
         # Create storage directory if it doesn't exist
-        storage_path = Path(settings.audio_storage_path)
+        storage_path = Path(settings.babblr_audio_storage_path)
         storage_path.mkdir(parents=True, exist_ok=True)
 
         # Generate unique filename with timestamp

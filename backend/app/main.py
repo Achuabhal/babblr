@@ -26,7 +26,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url, "http://localhost:3000", "http://localhost:5173"],
+    allow_origins=[settings.babblr_frontend_url, "http://localhost:3000", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,12 +49,19 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Detailed health check."""
+    # Check if Claude API key is properly configured (not placeholder)
+    claude_configured = (
+        settings.anthropic_api_key and settings.anthropic_api_key != "your_anthropic_api_key_here"
+    )
+
     return {
         "status": "healthy",
         "database": "connected",
+        "llm_provider": settings.llm_provider,
         "services": {
             "whisper": "loaded",
-            "claude": "configured" if settings.anthropic_api_key else "not configured",
+            "claude": "configured" if claude_configured else "not configured",
+            "ollama": "configured",  # Ollama availability checked at request time
             "tts": "available",
         },
     }
@@ -63,11 +70,15 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host=settings.host, port=settings.port, reload=True)
+    uvicorn.run(
+        "main:app", host=settings.babblr_api_host, port=settings.babblr_api_port, reload=True
+    )
 
 
 def main():
     """Entry point for uv script."""
     import uvicorn
 
-    uvicorn.run("app.main:app", host=settings.host, port=settings.port, reload=True)
+    uvicorn.run(
+        "app.main:app", host=settings.babblr_api_host, port=settings.babblr_api_port, reload=True
+    )
