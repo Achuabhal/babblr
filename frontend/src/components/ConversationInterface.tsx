@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import type { Conversation, Message, Correction } from '../types';
-import { conversationService, chatService, speechService, ttsService } from '../services/api';
+import { conversationService, chatService, speechService } from '../services/api';
 import AudioRecorder from './AudioRecorder';
 import MessageBubble from './MessageBubble';
+import { TTSControls } from './TTSControls';
+import { useTTS } from '../hooks/useTTS';
 import './ConversationInterface.css';
 
 interface ConversationInterfaceProps {
@@ -20,6 +22,34 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
   const [corrections, setCorrections] = useState<Correction[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const { speak, stop, pause, resume, isSpeaking, isPaused, supported, voices, lastError } =
+    useTTS();
+
+  const [activeMessageId, setActiveMessageId] = useState<number | null>(null);
+  const [lastAutoPlayedAssistantId, setLastAutoPlayedAssistantId] = useState<number | null>(null);
+
+  const rateStorageKey = 'babblr.tts.rate';
+  const autoPlayStorageKey = 'babblr.tts.autoPlay';
+  const voiceStorageKey = useMemo(
+    () => `babblr.tts.voice.${conversation.language.toLowerCase()}`,
+    [conversation.language]
+  );
+
+  const [ttsRate, setTtsRate] = useState<number>(() => {
+    if (typeof window === 'undefined') return 1.0;
+    const stored = window.localStorage.getItem(rateStorageKey);
+    const value = stored ? Number(stored) : 1.0;
+    return Number.isFinite(value) ? value : 1.0;
+  });
+  const [ttsAutoPlay, setTtsAutoPlay] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(autoPlayStorageKey) === 'true';
+  });
+  const [ttsVoiceURI, setTtsVoiceURI] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return window.localStorage.getItem(voiceStorageKey);
+  });
+
   useEffect(() => {
     loadMessages();
   }, [conversation.id]);
@@ -27,6 +57,69 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    // Load voice preference per language (rate/autoplay are global).
+    if (typeof window === 'undefined') return;
+    setTtsVoiceURI(window.localStorage.getItem(voiceStorageKey));
+  }, [voiceStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(rateStorageKey, String(ttsRate));
+  }, [ttsRate]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(autoPlayStorageKey, String(ttsAutoPlay));
+  }, [ttsAutoPlay]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (ttsVoiceURI) {
+      window.localStorage.setItem(voiceStorageKey, ttsVoiceURI);
+    } else {
+      window.localStorage.removeItem(voiceStorageKey);
+    }
+  }, [ttsVoiceURI, voiceStorageKey]);
+
+  useEffect(() => {
+    // Auto-play the newest assistant message (optional setting).
+    if (!supported || !ttsAutoPlay) return;
+    if (isSpeaking) return;
+
+    const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
+    if (!lastAssistant) return;
+
+    if (lastAutoPlayedAssistantId !== null && lastAssistant.id <= lastAutoPlayedAssistantId) {
+      return;
+    }
+
+    setActiveMessageId(lastAssistant.id);
+    speak(lastAssistant.content, {
+      language: conversation.language,
+      rate: ttsRate,
+      autoPlay: ttsAutoPlay,
+      voiceURI: ttsVoiceURI ?? undefined,
+    });
+    setLastAutoPlayedAssistantId(lastAssistant.id);
+  }, [
+    messages,
+    supported,
+    ttsAutoPlay,
+    ttsRate,
+    ttsVoiceURI,
+    conversation.language,
+    speak,
+    isSpeaking,
+    lastAutoPlayedAssistantId,
+  ]);
+
+  useEffect(() => {
+    if (!isSpeaking) {
+      setActiveMessageId(null);
+    }
+  }, [isSpeaking]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -62,18 +155,6 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
       // Reload messages to get the updated conversation
       await loadMessages();
 
-      // Play TTS for assistant response
-      try {
-        const audioBlob = await ttsService.synthesize(
-          response.assistant_message,
-          conversation.language
-        );
-        const audio = new Audio(URL.createObjectURL(audioBlob));
-        audio.play();
-      } catch (ttsError) {
-        console.error('TTS not available:', ttsError);
-      }
-
       setInputText('');
     } catch (error) {
       // Error is already handled by errorHandler in api.ts
@@ -106,12 +187,34 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
   return (
     <div className="conversation-interface">
       <div className="conversation-header">
-        <button className="back-button" onClick={onBack}>
-          ← Back
-        </button>
-        <div className="conversation-info">
-          <h2>{conversation.language}</h2>
-          <span className="difficulty-badge">{conversation.difficulty_level}</span>
+        <div className="conversation-header-left">
+          <button className="back-button" onClick={onBack}>
+            ← Back
+          </button>
+          <div className="conversation-info">
+            <h2>{conversation.language}</h2>
+            <span className="difficulty-badge">{conversation.difficulty_level}</span>
+          </div>
+        </div>
+
+        <div className="conversation-header-right">
+          <TTSControls
+            language={conversation.language}
+            supported={supported}
+            voices={voices}
+            selectedVoiceURI={ttsVoiceURI}
+            rate={ttsRate}
+            autoPlay={ttsAutoPlay}
+            isSpeaking={isSpeaking}
+            isPaused={isPaused}
+            lastError={lastError}
+            onSelectVoiceURI={setTtsVoiceURI}
+            onRateChange={setTtsRate}
+            onAutoPlayChange={setTtsAutoPlay}
+            onPause={pause}
+            onResume={resume}
+            onStop={stop}
+          />
         </div>
       </div>
 
@@ -123,7 +226,22 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
           </div>
         ) : (
           messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+            <MessageBubble
+              key={message.id}
+              message={message}
+              ttsSupported={supported}
+              isSpeaking={isSpeaking}
+              isActive={activeMessageId === message.id}
+              onPlay={(textToSpeak) => {
+                setActiveMessageId(message.id);
+                speak(textToSpeak, {
+                  language: conversation.language,
+                  rate: ttsRate,
+                  autoPlay: ttsAutoPlay,
+                  voiceURI: ttsVoiceURI ?? undefined,
+                });
+              }}
+            />
           ))
         )}
         {isLoading && (
