@@ -13,11 +13,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.database.db import get_db
+from app.models.models import Conversation
 from app.models.schemas import TranscriptionResponse
+from app.services.language_catalog import LANGUAGE_VARIANTS, list_locales
 from app.services.whisper_service import whisper_service
 
 logger = logging.getLogger(__name__)
@@ -25,11 +30,21 @@ logger = logging.getLogger(__name__)
 # Configuration constants
 DEFAULT_TRANSCRIPTION_TIMEOUT = 30  # seconds
 
-router = APIRouter(prefix="/api/stt", tags=["stt"])
+router = APIRouter(prefix="/stt", tags=["speech-to-text"])
+legacy_router = APIRouter(prefix="/api/stt", tags=["speech-to-text (legacy)"])
 
 
 @router.post("/transcribe", response_model=TranscriptionResponse)
-async def transcribe_audio(audio_file: UploadFile = File(...), language: Optional[str] = None):
+@legacy_router.post("/transcribe", response_model=TranscriptionResponse, deprecated=True)
+async def transcribe_audio(
+    # Accept both "audio" (used by the current frontend and legacy /speech route)
+    # and "audio_file" (used by the original /api/stt route) for compatibility.
+    audio: UploadFile | None = File(None),
+    audio_file: UploadFile | None = File(None),
+    language: Optional[str] = None,
+    conversation_id: int | None = None,
+    db: AsyncSession = Depends(get_db),
+):
     """
     Transcribe audio file to text using OpenAI Whisper.
 
@@ -46,26 +61,40 @@ async def transcribe_audio(audio_file: UploadFile = File(...), language: Optiona
     Raises:
         HTTPException: 400 for invalid file, 500 for transcription errors
     """
+    upload = audio or audio_file
+    if upload is None:
+        raise HTTPException(status_code=400, detail="No file provided")
+
     logger.info(
         "Received transcription request: filename=%s, content_type=%s, language=%s",
-        audio_file.filename,
-        audio_file.content_type,
+        upload.filename,
+        upload.content_type,
         language,
     )
 
     # Validate file
-    if not audio_file.filename:
+    if not upload.filename:
         raise HTTPException(status_code=400, detail="No file provided")
 
     temp_file = None
 
     try:
+        # If a conversation_id is provided, validate it exists so clients can keep
+        # conversation-scoped workflows without using the legacy /speech routes.
+        if conversation_id is not None:
+            result = await db.execute(
+                select(Conversation).where(Conversation.id == conversation_id)
+            )
+            conversation = result.scalar_one_or_none()
+            if not conversation:
+                raise HTTPException(status_code=404, detail="Conversation not found")
+
         # Create temp file
-        suffix = os.path.splitext(audio_file.filename)[1] or ".webm"
+        suffix = os.path.splitext(upload.filename)[1] or ".webm"
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
 
         # Write uploaded content
-        content = await audio_file.read()
+        content = await upload.read()
         logger.debug("Audio file size: %d bytes", len(content))
 
         if len(content) == 0:
@@ -76,7 +105,7 @@ async def transcribe_audio(audio_file: UploadFile = File(...), language: Optiona
 
         # Save file in development mode (for debugging/testing)
         if settings.babblr_dev_mode:
-            await _save_audio_file(temp_file.name, audio_file.filename)
+            await _save_audio_file(temp_file.name, upload.filename)
 
         logger.info("Starting transcription...")
 
@@ -126,6 +155,7 @@ async def transcribe_audio(audio_file: UploadFile = File(...), language: Optiona
 
 
 @router.get("/languages")
+@legacy_router.get("/languages", deprecated=True)
 async def get_supported_languages():
     """
     Get list of supported languages for speech-to-text.
@@ -135,29 +165,34 @@ async def get_supported_languages():
     """
     logger.debug("Getting supported languages")
 
-    languages = whisper_service.get_supported_languages()
+    supported_locales = list_locales(stt_only=True)
 
-    # Create detailed language information
-    language_details = {
-        "es": {"code": "es", "name": "Spanish", "native_name": "Español"},
-        "it": {"code": "it", "name": "Italian", "native_name": "Italiano"},
-        "de": {"code": "de", "name": "German", "native_name": "Deutsch"},
-        "fr": {"code": "fr", "name": "French", "native_name": "Français"},
-        "nl": {"code": "nl", "name": "Dutch", "native_name": "Nederlands"},
-        "en": {"code": "en", "name": "English", "native_name": "English"},
-    }
+    languages = []
+    for variant in LANGUAGE_VARIANTS:
+        if variant.locale not in supported_locales:
+            continue
+        languages.append(
+            {
+                "locale": variant.locale,
+                "iso_639_1": variant.iso_639_1,
+                "iso_3166_1": variant.iso_3166_1,
+                "name": variant.name,
+                "native_name": variant.native_name,
+                "stt": {"supported": variant.stt, "whisper_language_code": variant.iso_639_1},
+                "tts": {"supported": variant.tts},
+            }
+        )
 
     return JSONResponse(
         content={
-            "languages": [
-                language_details.get(code, {"code": code, "name": code}) for code in languages
-            ],
+            "languages": languages,
             "count": len(languages),
         }
     )
 
 
 @router.get("/models")
+@legacy_router.get("/models", deprecated=True)
 async def get_available_models():
     """
     Get list of available Whisper models.
@@ -214,6 +249,11 @@ async def get_available_models():
             "models": [model_details.get(model, {"name": model}) for model in models],
             "current_model": current_model,
             "device": whisper_service.device if hasattr(whisper_service, "device") else "unknown",
+            "multilingual": True,
+            "notes": [
+                "Whisper model selection is not language-specific (models are multilingual).",
+                "You may pass a language hint as ISO-639-1 (e.g., 'en') or locale (e.g., 'en-GB'); locales map to ISO-639-1.",
+            ],
             "count": len(models),
         }
     )

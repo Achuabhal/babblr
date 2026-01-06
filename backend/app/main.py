@@ -41,6 +41,7 @@ app.include_router(chat.router)
 app.include_router(speech.router)
 app.include_router(tts.router)
 app.include_router(stt.router)
+app.include_router(stt.legacy_router)
 
 
 @app.get("/")

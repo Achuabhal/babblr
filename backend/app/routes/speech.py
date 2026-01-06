@@ -20,10 +20,10 @@ from app.services.whisper_service import whisper_service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/speech", tags=["speech"])
+router = APIRouter(prefix="/speech", tags=["speech (legacy)"])
 
 
-@router.post("/transcribe", response_model=TranscriptionResponse)
+@router.post("/transcribe", response_model=TranscriptionResponse, deprecated=True)
 async def transcribe_audio(
     conversation_id: int,
     language: str,
