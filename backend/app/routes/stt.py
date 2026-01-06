@@ -31,16 +31,11 @@ logger = logging.getLogger(__name__)
 DEFAULT_TRANSCRIPTION_TIMEOUT = 30  # seconds
 
 router = APIRouter(prefix="/stt", tags=["speech-to-text"])
-legacy_router = APIRouter(prefix="/api/stt", tags=["speech-to-text (legacy)"])
 
 
 @router.post("/transcribe", response_model=TranscriptionResponse)
-@legacy_router.post("/transcribe", response_model=TranscriptionResponse, deprecated=True)
 async def transcribe_audio(
-    # Accept both "audio" (used by the current frontend and legacy /speech route)
-    # and "audio_file" (used by the original /api/stt route) for compatibility.
-    audio: UploadFile | None = File(None),
-    audio_file: UploadFile | None = File(None),
+    audio: UploadFile = File(...),
     language: Optional[str] = None,
     conversation_id: int | None = None,
     db: AsyncSession = Depends(get_db),
@@ -61,19 +56,15 @@ async def transcribe_audio(
     Raises:
         HTTPException: 400 for invalid file, 500 for transcription errors
     """
-    upload = audio or audio_file
-    if upload is None:
-        raise HTTPException(status_code=400, detail="No file provided")
-
     logger.info(
         "Received transcription request: filename=%s, content_type=%s, language=%s",
-        upload.filename,
-        upload.content_type,
+        audio.filename,
+        audio.content_type,
         language,
     )
 
     # Validate file
-    if not upload.filename:
+    if not audio.filename:
         raise HTTPException(status_code=400, detail="No file provided")
 
     temp_file = None
@@ -90,11 +81,11 @@ async def transcribe_audio(
                 raise HTTPException(status_code=404, detail="Conversation not found")
 
         # Create temp file
-        suffix = os.path.splitext(upload.filename)[1] or ".webm"
+        suffix = os.path.splitext(audio.filename)[1] or ".webm"
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
 
         # Write uploaded content
-        content = await upload.read()
+        content = await audio.read()
         logger.debug("Audio file size: %d bytes", len(content))
 
         if len(content) == 0:
@@ -105,7 +96,7 @@ async def transcribe_audio(
 
         # Save file in development mode (for debugging/testing)
         if settings.babblr_dev_mode:
-            await _save_audio_file(temp_file.name, upload.filename)
+            await _save_audio_file(temp_file.name, audio.filename)
 
         logger.info("Starting transcription...")
 
@@ -155,7 +146,6 @@ async def transcribe_audio(
 
 
 @router.get("/languages")
-@legacy_router.get("/languages", deprecated=True)
 async def get_supported_languages():
     """
     Get list of supported languages for speech-to-text.
@@ -192,7 +182,6 @@ async def get_supported_languages():
 
 
 @router.get("/models")
-@legacy_router.get("/models", deprecated=True)
 async def get_available_models():
     """
     Get list of available Whisper models.
