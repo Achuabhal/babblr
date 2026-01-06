@@ -41,9 +41,27 @@ if command -v uv &> /dev/null; then
         echo "[WARNING] .env file not found in backend directory"
     fi
     
-    # Run using uv (preferred method)
-    # uv run automatically uses the .venv in the current directory
-    uv run babblr-backend
+    # Development mode: enable reload by default unless explicitly disabled
+    if [ -z "${BABBLR_DEV_MODE+x}" ]; then
+        export BABBLR_DEV_MODE=1
+    fi
+
+    # Defaults (used by uvicorn CLI). Settings in backend/.env can override these.
+    if [ -z "${BABBLR_API_HOST+x}" ] || [ -z "$BABBLR_API_HOST" ]; then
+        export BABBLR_API_HOST="127.0.0.1"
+    fi
+    if [ -z "${BABBLR_API_PORT+x}" ] || [ -z "$BABBLR_API_PORT" ]; then
+        export BABBLR_API_PORT="8000"
+    fi
+
+    # Prefer uvicorn CLI for reliable reload behavior across platforms.
+    if [ "$BABBLR_DEV_MODE" = "1" ] || [ "$BABBLR_DEV_MODE" = "true" ]; then
+        echo "[START] Dev mode enabled (BABBLR_DEV_MODE=$BABBLR_DEV_MODE) - starting with --reload"
+        uv run uvicorn app.main:app --reload --host "$BABBLR_API_HOST" --port "$BABBLR_API_PORT"
+    else
+        echo "[START] Dev mode disabled (BABBLR_DEV_MODE=$BABBLR_DEV_MODE) - starting without reload"
+        uv run uvicorn app.main:app --host "$BABBLR_API_HOST" --port "$BABBLR_API_PORT"
+    fi
 else
     echo "[WARNING] uv not found, falling back to standard Python..."
     echo "   For better performance, install uv: curl -LsSf https://astral.sh/uv/install.sh | sh"
@@ -56,6 +74,20 @@ else
     fi
     
     export PYTHONPATH="$(pwd)"
-    cd app
-    python main.py
+
+    if [ -z "${BABBLR_DEV_MODE+x}" ]; then
+        export BABBLR_DEV_MODE=1
+    fi
+    if [ -z "${BABBLR_API_HOST+x}" ] || [ -z "$BABBLR_API_HOST" ]; then
+        export BABBLR_API_HOST="127.0.0.1"
+    fi
+    if [ -z "${BABBLR_API_PORT+x}" ] || [ -z "$BABBLR_API_PORT" ]; then
+        export BABBLR_API_PORT="8000"
+    fi
+
+    if [ "$BABBLR_DEV_MODE" = "1" ] || [ "$BABBLR_DEV_MODE" = "true" ]; then
+        python -m uvicorn app.main:app --reload --host "$BABBLR_API_HOST" --port "$BABBLR_API_PORT"
+    else
+        python -m uvicorn app.main:app --host "$BABBLR_API_HOST" --port "$BABBLR_API_PORT"
+    fi
 fi
