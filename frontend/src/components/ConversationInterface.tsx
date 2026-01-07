@@ -4,7 +4,7 @@ import { conversationService, chatService, speechService } from '../services/api
 import AudioRecorder from './AudioRecorder';
 import MessageBubble from './MessageBubble';
 import { TTSControls } from './TTSControls';
-import { useTTS } from '../hooks/useTTS';
+import { getPreferredVoiceURI, useTTS } from '../hooks/useTTS';
 import { formatLevelLabel, getDefaultTtsRateForLevel, normalizeToCefrLevel } from '../utils/cefr';
 import { getStarterMessage } from '../utils/starterMessages';
 import './ConversationInterface.css';
@@ -133,6 +133,17 @@ const ConversationInterface: React.FC<ConversationInterfaceProps> = ({ conversat
     if (typeof window === 'undefined') return;
     setTtsVoiceURI(window.localStorage.getItem(voiceStorageKey));
   }, [voiceStorageKey]);
+
+  useEffect(() => {
+    // Default to a sensible voice for the selected language.
+    // This is important because voice availability differs between browsers (Chrome vs Edge vs Electron).
+    if (!supported) return;
+    if (ttsVoiceURI) return;
+    if (!voices || voices.length === 0) return;
+
+    const preferred = getPreferredVoiceURI(voices, conversation.language);
+    if (preferred) setTtsVoiceURI(preferred);
+  }, [supported, ttsVoiceURI, voices, conversation.language]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

@@ -24,7 +24,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function languageToBCP47(language: string): string {
+export function languageToBCP47(language: string): string {
   const key = language.trim().toLowerCase();
   switch (key) {
     case 'spanish':
@@ -49,11 +49,14 @@ function getBaseLanguageTag(tag: string): string {
   return tag.split('-')[0]?.toLowerCase() ?? '';
 }
 
-function rankVoice(voice: SpeechSynthesisVoice): number {
+function rankVoice(voice: SpeechSynthesisVoice, targetBCP47: string): number {
   // Prefer local voices (usually higher quality and faster).
   // Prefer non-default voices when multiple are available.
   // Keep it simple to avoid platform-specific heuristics.
   let score = 0;
+  const target = targetBCP47.toLowerCase();
+  const lang = (voice.lang ?? '').toLowerCase();
+  if (lang === target) score += 1000; // exact locale match (e.g., es-ES)
   if (voice.localService) score += 10;
   if (!voice.default) score += 1;
   return score;
@@ -63,11 +66,21 @@ function selectVoicesForLanguage(
   allVoices: SpeechSynthesisVoice[],
   targetBCP47: string
 ): SpeechSynthesisVoice[] {
+  const target = targetBCP47.toLowerCase();
   const base = getBaseLanguageTag(targetBCP47);
   if (!base) return [];
 
   const matches = allVoices.filter(v => getBaseLanguageTag(v.lang) === base);
-  return matches.sort((a, b) => rankVoice(b) - rankVoice(a));
+  return matches.sort((a, b) => rankVoice(b, target) - rankVoice(a, target));
+}
+
+export function getPreferredVoiceURI(
+  allVoices: SpeechSynthesisVoice[],
+  language: string
+): string | null {
+  const target = languageToBCP47(language);
+  const candidates = selectVoicesForLanguage(allVoices, target);
+  return candidates[0]?.voiceURI ?? null;
 }
 
 export function useTTS(): UseTTS {
@@ -155,9 +168,18 @@ export function useTTS(): UseTTS {
       utterance.rate = clamp(Number(config.rate) || 1, 0.5, 1.5);
       utterance.lang = languageToBCP47(config.language);
 
-      const candidates = selectVoicesForLanguage(voices, utterance.lang);
+      // Voices can load lazily and differ per browser. Always re-read the current list.
+      const currentVoices = (() => {
+        try {
+          return synth.getVoices();
+        } catch {
+          return voices;
+        }
+      })();
+
+      const candidates = selectVoicesForLanguage(currentVoices, utterance.lang);
       const preferred = config.voiceURI
-        ? voices.find(v => v.voiceURI === config.voiceURI)
+        ? currentVoices.find(v => v.voiceURI === config.voiceURI)
         : undefined;
       utterance.voice = preferred ?? candidates[0] ?? null;
 

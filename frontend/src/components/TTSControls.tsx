@@ -63,7 +63,15 @@ export const TTSControls: React.FC<TTSControlsProps> = ({
   const languageVoices = useMemo(() => {
     const base = languageToBaseTag(language);
     if (!base) return [];
-    return voices.filter(v => getBaseLanguageTag(v.lang) === base);
+    const baseMatches = voices.filter(v => getBaseLanguageTag(v.lang) === base);
+
+    // For Spanish study, prefer Spain Spanish (es-ES). If available, only show es-ES voices to avoid es-AR/es-MX.
+    if (language.trim().toLowerCase() === 'spanish') {
+      const esEs = baseMatches.filter(v => (v.lang ?? '').toLowerCase() === 'es-es');
+      if (esEs.length > 0) return esEs;
+    }
+
+    return baseMatches;
   }, [language, voices]);
 
   const showVoiceSelector = supported && languageVoices.length > 0;

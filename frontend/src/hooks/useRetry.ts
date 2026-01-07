@@ -37,6 +37,7 @@ export const useRetry = <Args extends unknown[], Result>(
       setError(null);
       cancelRef.current = false;
       let currentDelay = initialDelay;
+      let lastError: unknown = null;
 
       for (let i = 0; i <= maxRetries; i++) {
         try {
@@ -49,6 +50,7 @@ export const useRetry = <Args extends unknown[], Result>(
           setIsRetrying(false);
           return result;
         } catch (err: unknown) {
+          lastError = err;
           setError(toError(err));
 
           if (i === maxRetries || !shouldRetry(err) || cancelRef.current) {
@@ -61,6 +63,12 @@ export const useRetry = <Args extends unknown[], Result>(
           currentDelay = Math.min(currentDelay * 2, maxDelay);
         }
       }
+
+      setIsRetrying(false);
+      if (cancelRef.current) {
+        throw new Error('Operation cancelled');
+      }
+      throw lastError ?? new Error('Operation failed');
     },
     [operation, maxRetries, initialDelay, maxDelay]
   );
@@ -77,5 +85,6 @@ function shouldRetry(error: unknown): boolean {
   // Retry on network errors or specific status codes (429, 503, 504)
   if (!isHttpErrorLike(error) || !error.response) return true;
   const status = error.response.status;
+  if (typeof status !== 'number') return true;
   return [429, 503, 504].includes(status);
 }
