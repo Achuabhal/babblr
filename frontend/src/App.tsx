@@ -2,14 +2,17 @@ import { useState, useEffect } from 'react';
 import LanguageSelector from './components/LanguageSelector';
 import ConversationInterface from './components/ConversationInterface';
 import ConversationList from './components/ConversationList';
+import Settings from './components/Settings';
 import { conversationService } from './services/api';
 import type { Conversation, Language, DifficultyLevel } from './types';
+import { Settings as SettingsIcon } from 'lucide-react';
 import './App.css';
 
 function App() {
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [showLanguageSelector, setShowLanguageSelector] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
   const loadConversations = async () => {
     try {
@@ -50,10 +53,19 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1 onClick={handleBackToHome} style={{ cursor: 'pointer' }}>
-          🗣️ Babblr
-        </h1>
+        <div className="app-header-left">
+          <h1 onClick={handleBackToHome} style={{ cursor: 'pointer' }}>
+            🗣️ Babblr
+          </h1>
+        </div>
         <p className="app-subtitle">Learn languages naturally through conversation</p>
+        <button
+          className="settings-button-header"
+          onClick={() => setShowSettings(true)}
+          aria-label="Open settings"
+        >
+          <SettingsIcon size={24} />
+        </button>
       </header>
 
       <main className="app-main">
@@ -76,6 +88,8 @@ function App() {
           />
         ) : null}
       </main>
+
+      <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }
