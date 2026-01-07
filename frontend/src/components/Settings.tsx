@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { X, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
-import { settingsService, type LLMProvider } from '../services/settings';
+import {
+  settingsService,
+  type LLMProvider,
+  AVAILABLE_MODELS,
+  DEFAULT_MODELS,
+} from '../services/settings';
 import { maskApiKey } from '../utils/encryption';
 import toast from 'react-hot-toast';
 import './Settings.css';
@@ -28,6 +33,12 @@ function Settings({ isOpen, onClose }: SettingsProps) {
   const [isAnthropicKeyMasked, setIsAnthropicKeyMasked] = useState(false);
   const [isGoogleKeyMasked, setIsGoogleKeyMasked] = useState(false);
 
+  // Model selection state
+  const [ollamaModel, setOllamaModel] = useState(DEFAULT_MODELS.ollama);
+  const [claudeModel, setClaudeModel] = useState(DEFAULT_MODELS.claude);
+  const [geminiModel, setGeminiModel] = useState(DEFAULT_MODELS.gemini);
+  const [customOllamaModel, setCustomOllamaModel] = useState('');
+
   useEffect(() => {
     if (isOpen) {
       loadSettings();
@@ -38,6 +49,18 @@ function Settings({ isOpen, onClose }: SettingsProps) {
     try {
       const settings = await settingsService.loadSettings();
       setLlmProvider(settings.llmProvider);
+
+      // Load model selections
+      setOllamaModel(settings.ollamaModel);
+      setClaudeModel(settings.claudeModel);
+      setGeminiModel(settings.geminiModel);
+
+      // Check if Ollama model is custom (not in predefined list)
+      const isOllamaCustom = !AVAILABLE_MODELS.ollama.some(m => m.value === settings.ollamaModel);
+      if (isOllamaCustom) {
+        setCustomOllamaModel(settings.ollamaModel);
+        setOllamaModel('custom');
+      }
 
       // Check if keys exist but don't show them for security
       setHasAnthropicKey(!!settings.anthropicApiKey);
@@ -107,6 +130,14 @@ function Settings({ isOpen, onClose }: SettingsProps) {
     try {
       // Save LLM provider
       settingsService.saveLLMProvider(llmProvider);
+
+      // Save model selections
+      const effectiveOllamaModel = ollamaModel === 'custom' ? customOllamaModel : ollamaModel;
+      if (effectiveOllamaModel) {
+        settingsService.saveModel('ollama', effectiveOllamaModel);
+      }
+      settingsService.saveModel('claude', claudeModel);
+      settingsService.saveModel('gemini', geminiModel);
 
       // Save API keys only if they were changed (not masked)
       if (anthropicApiKey && !isAnthropicKeyMasked) {
@@ -251,6 +282,20 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                   <span>API key configured (enter new key to replace)</span>
                 </div>
               )}
+
+              <h4 className="settings-subsection-title">Model Selection</h4>
+              <p className="settings-description">Select which Claude model to use.</p>
+              <select
+                value={claudeModel}
+                onChange={e => setClaudeModel(e.target.value)}
+                className="settings-select"
+              >
+                {AVAILABLE_MODELS.claude.map(model => (
+                  <option key={model.value} value={model.value}>
+                    {model.label}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 
@@ -312,6 +357,20 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                   <span>API key configured (enter new key to replace)</span>
                 </div>
               )}
+
+              <h4 className="settings-subsection-title">Model Selection</h4>
+              <p className="settings-description">Select which Gemini model to use.</p>
+              <select
+                value={geminiModel}
+                onChange={e => setGeminiModel(e.target.value)}
+                className="settings-select"
+              >
+                {AVAILABLE_MODELS.gemini.map(model => (
+                  <option key={model.value} value={model.value}>
+                    {model.label}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 
@@ -333,6 +392,38 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                   </p>
                 </div>
               </div>
+
+              <h4 className="settings-subsection-title">Model Selection</h4>
+              <p className="settings-description">
+                Select an Ollama model to use. Make sure the model is pulled locally.
+              </p>
+              <select
+                value={ollamaModel}
+                onChange={e => {
+                  setOllamaModel(e.target.value);
+                  if (e.target.value !== 'custom') {
+                    setCustomOllamaModel('');
+                  }
+                }}
+                className="settings-select"
+              >
+                {AVAILABLE_MODELS.ollama.map(model => (
+                  <option key={model.value} value={model.value}>
+                    {model.label}
+                  </option>
+                ))}
+                <option value="custom">Custom Model...</option>
+              </select>
+
+              {ollamaModel === 'custom' && (
+                <input
+                  type="text"
+                  value={customOllamaModel}
+                  onChange={e => setCustomOllamaModel(e.target.value)}
+                  placeholder="e.g., llama3:8b, codellama:13b"
+                  className="settings-input settings-input-model"
+                />
+              )}
             </div>
           )}
         </div>

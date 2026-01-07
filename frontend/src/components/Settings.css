@@ -282,3 +282,15 @@
   padding: 24px;
   border-top: 1px solid #e5e7eb;
 }
+
+/* Model selection styles */
+.settings-subsection-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin: 16px 0 8px 0;
+}
+
+.settings-input-model {
+  margin-top: 8px;
+}

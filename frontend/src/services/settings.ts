@@ -4,6 +4,40 @@ const SETTINGS_KEYS = {
   ANTHROPIC_API_KEY: 'babblr_anthropic_api_key',
   GOOGLE_API_KEY: 'babblr_google_api_key',
   LLM_PROVIDER: 'babblr_llm_provider',
+  OLLAMA_MODEL: 'babblr_ollama_model',
+  CLAUDE_MODEL: 'babblr_claude_model',
+  GEMINI_MODEL: 'babblr_gemini_model',
+};
+
+// Available models per provider
+export const AVAILABLE_MODELS = {
+  ollama: [
+    { value: 'llama3.2:latest', label: 'Llama 3.2 (Default)' },
+    { value: 'llama3.1:latest', label: 'Llama 3.1' },
+    { value: 'mistral:latest', label: 'Mistral' },
+    { value: 'mixtral:latest', label: 'Mixtral' },
+    { value: 'codellama:latest', label: 'Code Llama' },
+    { value: 'gemma2:latest', label: 'Gemma 2' },
+    { value: 'phi3:latest', label: 'Phi-3' },
+    { value: 'qwen2:latest', label: 'Qwen 2' },
+  ],
+  claude: [
+    { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4 (Latest)' },
+    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
+    { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku (Fast)' },
+  ],
+  gemini: [
+    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (Default)' },
+    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (Fast)' },
+    { value: 'gemini-pro', label: 'Gemini Pro' },
+  ],
+};
+
+export const DEFAULT_MODELS = {
+  ollama: 'llama3.2:latest',
+  claude: 'claude-sonnet-4-20250514',
+  gemini: 'gemini-1.5-pro',
 };
 
 export type LLMProvider = 'ollama' | 'claude' | 'gemini' | 'mock';
@@ -12,6 +46,9 @@ export interface AppSettings {
   llmProvider: LLMProvider;
   anthropicApiKey?: string;
   googleApiKey?: string;
+  ollamaModel: string;
+  claudeModel: string;
+  geminiModel: string;
 }
 
 /**
@@ -85,6 +122,32 @@ class SettingsService {
   }
 
   /**
+   * Save model for a specific provider
+   */
+  saveModel(provider: 'ollama' | 'claude' | 'gemini', model: string): void {
+    const key =
+      provider === 'ollama'
+        ? SETTINGS_KEYS.OLLAMA_MODEL
+        : provider === 'claude'
+          ? SETTINGS_KEYS.CLAUDE_MODEL
+          : SETTINGS_KEYS.GEMINI_MODEL;
+    localStorage.setItem(key, model);
+  }
+
+  /**
+   * Load model for a specific provider
+   */
+  loadModel(provider: 'ollama' | 'claude' | 'gemini'): string {
+    const key =
+      provider === 'ollama'
+        ? SETTINGS_KEYS.OLLAMA_MODEL
+        : provider === 'claude'
+          ? SETTINGS_KEYS.CLAUDE_MODEL
+          : SETTINGS_KEYS.GEMINI_MODEL;
+    return localStorage.getItem(key) || DEFAULT_MODELS[provider];
+  }
+
+  /**
    * Load all settings
    */
   async loadSettings(): Promise<AppSettings> {
@@ -97,6 +160,9 @@ class SettingsService {
       llmProvider: this.loadLLMProvider(),
       anthropicApiKey: anthropicApiKey || undefined,
       googleApiKey: googleApiKey || undefined,
+      ollamaModel: this.loadModel('ollama'),
+      claudeModel: this.loadModel('claude'),
+      geminiModel: this.loadModel('gemini'),
     };
   }
 
@@ -107,6 +173,9 @@ class SettingsService {
     localStorage.removeItem(SETTINGS_KEYS.ANTHROPIC_API_KEY);
     localStorage.removeItem(SETTINGS_KEYS.GOOGLE_API_KEY);
     localStorage.removeItem(SETTINGS_KEYS.LLM_PROVIDER);
+    localStorage.removeItem(SETTINGS_KEYS.OLLAMA_MODEL);
+    localStorage.removeItem(SETTINGS_KEYS.CLAUDE_MODEL);
+    localStorage.removeItem(SETTINGS_KEYS.GEMINI_MODEL);
   }
 }
 
