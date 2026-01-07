@@ -27,6 +27,12 @@ export interface Correction {
   type: 'grammar' | 'vocabulary' | 'style';
 }
 
+export interface STTCorrection {
+  original: string;
+  corrected: string;
+  reason: string;
+}
+
 export interface VocabularyItem {
   id: number;
   word: string;
@@ -46,5 +52,8 @@ export interface ChatResponse {
 
 export interface TranscriptionResponse {
   text: string;
-  corrections?: Correction[];
+  language: string;
+  confidence: number;
+  duration: number;
+  corrections?: STTCorrection[];
 }

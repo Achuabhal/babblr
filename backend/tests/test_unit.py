@@ -192,3 +192,85 @@ class TestWhisperService:
         # Test case insensitivity
         assert service._map_language_code("Spanish") == "es"
         assert service._map_language_code("FRENCH") == "fr"
+
+
+class TestSTTCorrectionService:
+    """Test STT Correction Service functionality."""
+
+    def test_stt_correction_service_import(self):
+        """Test that STTCorrectionService can be imported."""
+        from app.services.stt_correction_service import STTCorrectionService
+
+        assert STTCorrectionService is not None
+
+    def test_stt_correction_result_dataclass(self):
+        """Test STTCorrectionResult dataclass."""
+        from app.services.stt_correction_service import STTCorrectionResult
+
+        result = STTCorrectionResult(
+            original_text="mi amo",
+            corrected_text="me llamo",
+            corrections=[{"original": "mi amo", "corrected": "me llamo", "reason": "Homophone"}],
+            confidence=0.9,
+        )
+        assert result.original_text == "mi amo"
+        assert result.corrected_text == "me llamo"
+        assert len(result.corrections) == 1
+        assert result.confidence == 0.9
+
+    def test_stt_correction_result_defaults(self):
+        """Test STTCorrectionResult default values."""
+        from app.services.stt_correction_service import STTCorrectionResult
+
+        result = STTCorrectionResult(
+            original_text="hola",
+            corrected_text="hola",
+        )
+        assert result.corrections == []
+        assert result.confidence == 1.0
+
+    def test_get_stt_correction_service_singleton(self):
+        """Test that get_stt_correction_service returns singleton."""
+        from app.services.stt_correction_service import get_stt_correction_service
+
+        service1 = get_stt_correction_service()
+        service2 = get_stt_correction_service()
+        assert service1 is service2
+
+    def test_parse_response_valid_json(self):
+        """Test _parse_response with valid JSON."""
+        from app.services.stt_correction_service import STTCorrectionService
+
+        service = STTCorrectionService()
+        content = '{"corrected_text": "me llamo", "stt_corrections": [{"original": "mi amo", "corrected": "me llamo", "reason": "Homophone"}], "confidence": 0.85}'
+        result = service._parse_response(content, "mi amo")
+
+        assert result.original_text == "mi amo"
+        assert result.corrected_text == "me llamo"
+        assert len(result.corrections) == 1
+        assert result.confidence == 0.85
+
+    def test_parse_response_with_markdown_code_block(self):
+        """Test _parse_response with JSON in markdown code block."""
+        from app.services.stt_correction_service import STTCorrectionService
+
+        service = STTCorrectionService()
+        content = """```json
+{"corrected_text": "me llamo", "stt_corrections": [], "confidence": 1.0}
+```"""
+        result = service._parse_response(content, "me llamo")
+
+        assert result.corrected_text == "me llamo"
+        assert result.corrections == []
+
+    def test_parse_response_invalid_json(self):
+        """Test _parse_response with invalid JSON returns original text."""
+        from app.services.stt_correction_service import STTCorrectionService
+
+        service = STTCorrectionService()
+        content = "This is not valid JSON"
+        result = service._parse_response(content, "original text")
+
+        assert result.original_text == "original text"
+        assert result.corrected_text == "original text"
+        assert result.corrections == []

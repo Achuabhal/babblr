@@ -20,9 +20,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database.db import get_db
-from app.models.models import Conversation
+from app.models.models import Conversation, Message
 from app.models.schemas import TranscriptionResponse
 from app.services.language_catalog import LANGUAGE_VARIANTS, list_locales
+from app.services.stt_correction_service import get_stt_correction_service
 from app.services.whisper_service import whisper_service
 
 logger = logging.getLogger(__name__)
@@ -46,21 +47,27 @@ async def transcribe_audio(
     This endpoint receives an audio file and transcribes it to text.
     Supports multiple audio formats (webm, wav, mp3, etc.).
 
+    When conversation_id is provided, the transcription is corrected using
+    an LLM with conversation context to fix speech recognition errors
+    (homophones, similar-sounding words, etc.).
+
     Args:
         audio_file: Uploaded audio file
         language: Optional language hint (e.g., 'spanish', 'es')
+        conversation_id: Optional conversation ID for context-aware correction
 
     Returns:
-        TranscriptionResponse with text, language, confidence, and duration
+        TranscriptionResponse with text, language, confidence, duration, and corrections
 
     Raises:
         HTTPException: 400 for invalid file, 500 for transcription errors
     """
     logger.info(
-        "Received transcription request: filename=%s, content_type=%s, language=%s",
+        "Received transcription request: filename=%s, content_type=%s, language=%s, conversation_id=%s",
         audio.filename,
         audio.content_type,
         language,
+        conversation_id,
     )
 
     # Validate file
@@ -68,10 +75,11 @@ async def transcribe_audio(
         raise HTTPException(status_code=400, detail="No file provided")
 
     temp_file = None
+    conversation = None
+    conversation_history = []
 
     try:
-        # If a conversation_id is provided, validate it exists so clients can keep
-        # conversation-scoped workflows without using the legacy /speech routes.
+        # If a conversation_id is provided, validate it exists and fetch context
         if conversation_id is not None:
             result = await db.execute(
                 select(Conversation).where(Conversation.id == conversation_id)
@@ -79,6 +87,17 @@ async def transcribe_audio(
             conversation = result.scalar_one_or_none()
             if not conversation:
                 raise HTTPException(status_code=404, detail="Conversation not found")
+
+            # Fetch conversation history for STT correction
+            messages_result = await db.execute(
+                select(Message)
+                .where(Message.conversation_id == conversation_id)
+                .order_by(Message.created_at)
+            )
+            messages = messages_result.scalars().all()
+            conversation_history = [
+                {"role": str(msg.role), "content": str(msg.content)} for msg in messages
+            ]
 
         # Create temp file
         suffix = os.path.splitext(audio.filename)[1] or ".webm"
@@ -112,14 +131,46 @@ async def transcribe_audio(
             result.duration,
         )
 
+        # Apply STT correction if conversation context is available
+        corrections = None
+        final_text = result.text
+
+        if conversation is not None and conversation_history:
+            stt_correction_service = get_stt_correction_service()
+            correction_result = await stt_correction_service.correct_transcription(
+                stt_text=result.text,
+                conversation_history=conversation_history,
+                language=str(conversation.language),
+                difficulty_level=str(conversation.difficulty_level),
+            )
+
+            final_text = correction_result.corrected_text
+            if correction_result.corrections:
+                corrections = correction_result.corrections
+
+                # Log corrections in dev mode
+                if settings.babblr_dev_mode:
+                    logger.info(
+                        "STT correction applied:\n"
+                        "  Original STT: %s\n"
+                        "  Corrected: %s\n"
+                        "  Corrections: %s",
+                        result.text,
+                        final_text,
+                        corrections,
+                    )
+
         return TranscriptionResponse(
-            text=result.text,
+            text=final_text,
             language=result.language,
             confidence=result.confidence,
             duration=result.duration,
-            corrections=None,  # Corrections handled separately by chat endpoint
+            corrections=corrections,
         )
 
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 404)
+        raise
     except Exception as e:
         logger.error("Transcription failed: %s", str(e), exc_info=True)
 
