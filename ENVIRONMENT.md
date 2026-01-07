@@ -163,6 +163,19 @@ HOST=127.0.0.1
 PORT=8000
 ```
 
+### Development mode (debug helpers)
+
+The backend has a few development-only helpers. Enable them only on your local machine.
+
+```bash
+# When true, enables dev-only behavior in some endpoints
+DEVELOPMENT_MODE=true
+
+# When true (and DEVELOPMENT_MODE=true), `/stt/transcribe` will also save each uploaded
+# recording to the repo `tmp/` folder as `stt_YYYYMMDDHHMMSS.<ext>` for reproducible testing.
+STT_DUMP_UPLOADS=true
+```
+
 **When to change:**
 - Deploy to production: Change `HOST` to `0.0.0.0`
 - Port conflict: Change `PORT` to another port (e.g., `8001`)

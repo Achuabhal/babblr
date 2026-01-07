@@ -39,6 +39,7 @@ class Settings(BaseSettings):
 
     # Application settings
     development_mode: bool = False
+    stt_dump_uploads: bool = False
     audio_storage_path: str = "./audio_files"
     host: str = Field(
         default="127.0.0.1",
