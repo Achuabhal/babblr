@@ -10,6 +10,10 @@ interface SettingsProps {
   onClose: () => void;
 }
 
+// API key validation constants
+const ANTHROPIC_KEY_PREFIX = 'sk-ant-api03-';
+const GOOGLE_KEY_PREFIX = 'AI';
+
 function Settings({ isOpen, onClose }: SettingsProps) {
   const [llmProvider, setLlmProvider] = useState<LLMProvider>('ollama');
   const [anthropicApiKey, setAnthropicApiKey] = useState('');
@@ -58,7 +62,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
     setIsValidatingAnthropic(true);
     try {
       // Simple validation: Check if it looks like a valid Anthropic key
-      if (!key.startsWith('sk-ant-api03-')) {
+      if (!key.startsWith(ANTHROPIC_KEY_PREFIX)) {
         toast.error('Invalid Anthropic API key format');
         return false;
       }
@@ -80,7 +84,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
     setIsValidatingGoogle(true);
     try {
       // Simple validation: Check if it looks like a valid Google API key
-      if (!key.startsWith('AI')) {
+      if (!key.startsWith(GOOGLE_KEY_PREFIX)) {
         toast.error('Invalid Google API key format');
         return false;
       }
