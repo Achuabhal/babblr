@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { X, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 import { settingsService, type LLMProvider } from '../services/settings';
 import { maskApiKey } from '../utils/encryption';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 import './Settings.css';
 
@@ -10,8 +9,6 @@ interface SettingsProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-const API_BASE_URL = 'http://localhost:8000';
 
 function Settings({ isOpen, onClose }: SettingsProps) {
   const [llmProvider, setLlmProvider] = useState<LLMProvider>('ollama');
@@ -24,6 +21,8 @@ function Settings({ isOpen, onClose }: SettingsProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [hasAnthropicKey, setHasAnthropicKey] = useState(false);
   const [hasGoogleKey, setHasGoogleKey] = useState(false);
+  const [isAnthropicKeyMasked, setIsAnthropicKeyMasked] = useState(false);
+  const [isGoogleKeyMasked, setIsGoogleKeyMasked] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -43,9 +42,11 @@ function Settings({ isOpen, onClose }: SettingsProps) {
       // Show masked keys
       if (settings.anthropicApiKey) {
         setAnthropicApiKey(maskApiKey(settings.anthropicApiKey));
+        setIsAnthropicKeyMasked(true);
       }
       if (settings.googleApiKey) {
         setGoogleApiKey(maskApiKey(settings.googleApiKey));
+        setIsGoogleKeyMasked(true);
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -62,11 +63,9 @@ function Settings({ isOpen, onClose }: SettingsProps) {
         return false;
       }
 
-      // Make a test request to the backend health endpoint
-      // The backend will use this key if LLM_PROVIDER=claude
-      await axios.get(`${API_BASE_URL}/health`);
-      
-      toast.success('Anthropic API key validated');
+      // Note: Full validation would require sending a test request to Anthropic's API
+      // For now, we just validate the format
+      toast.success('Anthropic API key format is valid');
       return true;
     } catch (error) {
       console.error('Anthropic API key validation failed:', error);
@@ -86,10 +85,9 @@ function Settings({ isOpen, onClose }: SettingsProps) {
         return false;
       }
 
-      // Make a test request to the backend health endpoint
-      await axios.get(`${API_BASE_URL}/health`);
-      
-      toast.success('Google API key validated');
+      // Note: Full validation would require sending a test request to Google's API
+      // For now, we just validate the format
+      toast.success('Google API key format is valid');
       return true;
     } catch (error) {
       console.error('Google API key validation failed:', error);
@@ -107,12 +105,12 @@ function Settings({ isOpen, onClose }: SettingsProps) {
       settingsService.saveLLMProvider(llmProvider);
 
       // Save API keys only if they were changed (not masked)
-      if (anthropicApiKey && !anthropicApiKey.includes('•')) {
+      if (anthropicApiKey && !isAnthropicKeyMasked) {
         await settingsService.saveApiKey('anthropic', anthropicApiKey);
         setHasAnthropicKey(true);
       }
 
-      if (googleApiKey && !googleApiKey.includes('•')) {
+      if (googleApiKey && !isGoogleKeyMasked) {
         await settingsService.saveApiKey('google', googleApiKey);
         setHasGoogleKey(true);
       }
@@ -128,7 +126,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
   };
 
   const handleTestAnthropicKey = async () => {
-    if (anthropicApiKey && !anthropicApiKey.includes('•')) {
+    if (anthropicApiKey && !isAnthropicKeyMasked) {
       await validateAnthropicKey(anthropicApiKey);
     } else {
       toast.error('Please enter a new API key to test');
@@ -136,7 +134,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
   };
 
   const handleTestGoogleKey = async () => {
-    if (googleApiKey && !googleApiKey.includes('•')) {
+    if (googleApiKey && !isGoogleKeyMasked) {
       await validateGoogleKey(googleApiKey);
     } else {
       toast.error('Please enter a new API key to test');
@@ -147,6 +145,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
     settingsService.removeApiKey('anthropic');
     setAnthropicApiKey('');
     setHasAnthropicKey(false);
+    setIsAnthropicKeyMasked(false);
     toast.success('Anthropic API key cleared');
   };
 
@@ -154,6 +153,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
     settingsService.removeApiKey('google');
     setGoogleApiKey('');
     setHasGoogleKey(false);
+    setIsGoogleKeyMasked(false);
     toast.success('Google API key cleared');
   };
 
@@ -203,7 +203,10 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                   <input
                     type={showAnthropicKey ? 'text' : 'password'}
                     value={anthropicApiKey}
-                    onChange={(e) => setAnthropicApiKey(e.target.value)}
+                    onChange={(e) => {
+                      setAnthropicApiKey(e.target.value);
+                      setIsAnthropicKeyMasked(false);
+                    }}
                     placeholder="sk-ant-api03-..."
                     className="settings-input"
                   />
@@ -233,7 +236,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                   )}
                 </div>
               </div>
-              {hasAnthropicKey && !anthropicApiKey.includes('•') && (
+              {hasAnthropicKey && isAnthropicKeyMasked && (
                 <div className="settings-status settings-status-success">
                   <CheckCircle size={16} />
                   <span>API key configured (enter new key to replace)</span>
@@ -257,7 +260,10 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                   <input
                     type={showGoogleKey ? 'text' : 'password'}
                     value={googleApiKey}
-                    onChange={(e) => setGoogleApiKey(e.target.value)}
+                    onChange={(e) => {
+                      setGoogleApiKey(e.target.value);
+                      setIsGoogleKeyMasked(false);
+                    }}
                     placeholder="AIza..."
                     className="settings-input"
                   />
@@ -287,7 +293,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                   )}
                 </div>
               </div>
-              {hasGoogleKey && !googleApiKey.includes('•') && (
+              {hasGoogleKey && isGoogleKeyMasked && (
                 <div className="settings-status settings-status-success">
                   <CheckCircle size={16} />
                   <span>API key configured (enter new key to replace)</span>
