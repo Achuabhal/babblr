@@ -32,11 +32,39 @@ class ClaudeService:
         Returns:
             Tuple of (corrected_text, list_of_corrections)
         """
-        prompt = f"""You are a language tutor teaching {language}. A {difficulty_level} student said:
+        # Get correction strategy for this level
+        correction_strategy = self._prompt_builder.get_correction_strategy(difficulty_level)
+
+        # Build correction guidance based on strategy
+        ignore_list = []
+        if correction_strategy.get("ignore_punctuation"):
+            ignore_list.append("punctuation errors")
+        if correction_strategy.get("ignore_capitalization"):
+            ignore_list.append("capitalization mistakes")
+        if correction_strategy.get("ignore_diacritics"):
+            ignore_list.append("missing or incorrect diacritical marks (accents)")
+
+        focus_list = correction_strategy.get("focus_on", [])
+
+        guidance_parts = []
+        if ignore_list:
+            guidance_parts.append(f"IGNORE: {', '.join(ignore_list)}")
+        if focus_list:
+            focus_str = ", ".join(focus_list).replace("_", " ")
+            guidance_parts.append(f"FOCUS ON: {focus_str}")
+
+        correction_guidance = "\n".join(guidance_parts)
+
+        # Normalize level for display
+        normalized_level = self._prompt_builder.normalize_level(difficulty_level)
+
+        prompt = f"""You are a language tutor teaching {language}. A {normalized_level} level student said:
 
 "{text}"
 
-Analyze this for grammatical errors, vocabulary issues, or unnatural phrasing.
+Analyze this for errors based on the following correction strategy for {normalized_level} level:
+{correction_guidance}
+
 Respond with a JSON object containing:
 1. "corrected_text": The corrected version (or original if perfect)
 2. "corrections": Array of corrections, each with "original", "corrected", "explanation", and "type" (grammar/vocabulary/style)
@@ -67,6 +95,7 @@ Response format:
             return text, []
         except Exception as e:
             logger.error(f"Unexpected error in correct_text: {e}")
+            return text, []
             return text, []
 
     async def generate_response(
