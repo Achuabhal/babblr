@@ -9,6 +9,7 @@ Skip if no API key: pytest tests/test_gemini_integration.py -v -k "not integrati
 """
 
 import pytest
+
 from app.config import settings
 
 

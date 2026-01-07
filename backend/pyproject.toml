@@ -89,6 +89,10 @@ target-version = "py312"
 select = ["E", "F", "I", "N", "W"]
 ignore = ["E501"]
 
+[tool.ruff.lint.isort]
+# Ensure 'app' is always recognized as first-party regardless of working directory
+known-first-party = ["app"]
+
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "basic"
