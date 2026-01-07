@@ -84,12 +84,12 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
         # names like "Europe/Amsterdam". If not available (or misconfigured), we
         # fall back to UTC rather than failing the whole chat request.
         try:
-            tz = ZoneInfo(settings.timezone)
+            tz = ZoneInfo(settings.babblr_timezone)
         except ZoneInfoNotFoundError:
             logger.warning(
                 "Invalid/unavailable timezone '%s'; falling back to UTC. "
                 "Tip: on Windows, install the 'tzdata' Python package.",
-                settings.timezone,
+                settings.babblr_timezone,
             )
             tz = ZoneInfo("UTC")
 

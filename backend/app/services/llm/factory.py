@@ -127,7 +127,7 @@ class ProviderFactory:
         # Handle provider-specific initialization
         if name == "claude":
             api_key = getattr(settings, "anthropic_api_key", "")
-            model = getattr(settings, "claude_model", "claude-sonnet-4-20250514")
+            model = getattr(settings, "anthropic_model", "claude-sonnet-4-20250514")
             return provider_class(api_key=api_key, model=model)
         elif name == "ollama":
             base_url = getattr(settings, "ollama_base_url", "http://localhost:11434")
